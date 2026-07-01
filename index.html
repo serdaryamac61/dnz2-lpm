@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DNZ2 — Labor Planning Model</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#08101e;
+  --glass:rgba(255,255,255,0.04);
+  --glass-border:rgba(255,255,255,0.08);
+  --cyan:#00d4ff;
+  --cyan-dim:#0099bb;
+  --blue:#1a6fff;
+  --text:#e2eaf5;
+  --muted:#7a8fa8;
+  --red:#ff4f6a;
+  --green:#00e5a0;
+}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0,100,255,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(0,212,255,0.08) 0%, transparent 60%);
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;
+  background:rgba(0,0,0,0.4);
+  border-bottom:1px solid var(--glass-border);
+  backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100;
+}
+.topbar-left .site{font-size:1rem;font-weight:700;color:var(--text);}
+.topbar-left .sub{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.clock{font-size:1.1rem;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);}
+
+/* ── MAIN ── */
+.main{padding:24px 28px;max-width:1100px;margin:0 auto;}
+
+/* ── GLASS CARD ── */
+.glass{
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  backdrop-filter:blur(10px);
+  padding:22px 26px;
+  margin-bottom:18px;
+  transition:border-color .2s;
+}
+.glass:hover{border-color:rgba(0,212,255,0.18);}
+
+/* ── TOTAL HERO ── */
+.hero{
+  background:linear-gradient(135deg,rgba(0,90,200,0.25) 0%,rgba(0,40,100,0.35) 100%);
+  border:1px solid rgba(0,212,255,0.25);
+  border-radius:20px;
+  padding:30px 36px;
+  margin-bottom:18px;
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:220px;height:220px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,0.12) 0%,transparent 70%);
+}
+.hero-label{font-size:0.72rem;font-weight:600;color:var(--cyan);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;}
+.hero-num{font-size:5.5rem;font-weight:800;color:var(--cyan);line-height:1;text-shadow:0 0 40px rgba(0,212,255,0.4);}
+.hero-desc{font-size:0.9rem;color:rgba(226,234,245,0.8);margin-top:12px;line-height:1.6;}
+.hero-desc strong{color:#fff;}
+
+/* ── STAFFING BAR ── */
+.staffing-bar{
+  background:rgba(0,100,200,0.18);
+  border:1px solid rgba(0,180,255,0.2);
+  border-radius:12px;
+  padding:14px 22px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;
+  flex-wrap:wrap;gap:10px;
+}
+.staffing-bar .label{font-size:0.75rem;color:var(--muted);}
+.staffing-bar .plan-text{font-size:1.1rem;font-weight:700;color:var(--cyan);}
+.total-badge{
+  background:rgba(0,212,255,0.12);
+  border:1px solid rgba(0,212,255,0.35);
+  border-radius:20px;
+  padding:6px 20px;
+  font-size:0.85rem;font-weight:700;color:var(--cyan);
+  letter-spacing:.06em;
+}
+
+/* ── INPUT SECTION HEADER ── */
+.section-head{
+  font-size:0.7rem;font-weight:600;color:var(--cyan);
+  text-transform:uppercase;letter-spacing:.1em;
+  margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-head::after{content:'';flex:1;height:1px;background:var(--glass-border);}
+
+/* ── INPUT ROW ── */
+.input-row{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:14px;
+  margin-bottom:6px;
+}
+.field label{
+  display:block;font-size:0.72rem;color:var(--muted);margin-bottom:6px;font-weight:500;
+  min-height:28px;line-height:1.3;
+}
+.field input{
+  width:100%;
+  background:rgba(0,0,0,0.35);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px;
+  color:var(--text);
+  font-size:0.95rem;font-family:inherit;
+  padding:9px 13px;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.field input:focus{
+  border-color:var(--cyan);
+  box-shadow:0 0 0 3px rgba(0,212,255,0.1);
+}
+
+/* ── CALC BUTTON ── */
+.btn-calc{
+  background:linear-gradient(135deg,#005bff,#00b8ff);
+  color:#fff;border:none;border-radius:10px;
+  padding:12px 32px;
+  font-size:0.95rem;font-weight:700;font-family:inherit;
+  cursor:pointer;
+  letter-spacing:.04em;
+  box-shadow:0 4px 20px rgba(0,150,255,0.35);
+  transition:transform .15s,box-shadow .15s;
+  margin-top:16px;
+}
+.btn-calc:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(0,150,255,0.5);}
+.btn-calc:active{transform:translateY(0);}
+
+/* ── PHASES GRID ── */
+.phases{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;align-items:stretch;}
+
+.phase-card{
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  backdrop-filter:blur(10px);
+  overflow:hidden;
+  transition:border-color .2s;
+  display:flex;
+  flex-direction:column;
+}
+.phase-card:hover{border-color:rgba(0,212,255,0.2);}
+.phase-header{
+  padding:16px 20px 12px;
+  border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;gap:10px;
+}
+.phase-badge{
+  width:26px;height:26px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.8rem;font-weight:700;
+}
+.phase-badge.b1{background:rgba(255,100,80,0.2);color:#ff7055;border:1px solid rgba(255,100,80,0.3);}
+.phase-badge.b2{background:rgba(0,220,140,0.2);color:#00dc8c;border:1px solid rgba(0,220,140,0.3);}
+.phase-title{font-size:0.9rem;font-weight:700;}
+.phase-title.t1{color:#ff8870;}
+.phase-title.t2{color:#00dc8c;}
+.phase-body{padding:16px 20px;flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+
+.rates-label{font-size:0.65rem;font-weight:600;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
+
+.phase-field-row{display:grid;grid-template-columns:1fr 110px 36px;align-items:center;height:32px;}
+.pf-label{font-size:0.8rem;color:var(--muted);}
+.pf-val{
+  background:rgba(0,0,0,0.3);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:6px;
+  padding:5px 10px;
+  font-size:0.85rem;color:var(--text);font-family:inherit;
+  width:110px;text-align:right;
+}
+.pf-val:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,0.1);}
+.pf-unit{font-size:0.72rem;color:var(--muted);text-align:right;}
+
+.derived-label{font-size:0.65rem;font-weight:600;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin:12px 0 8px;}
+.derived-text{font-size:0.78rem;color:var(--muted);}
+.derived-text span{color:var(--text);}
+
+.phase-footer{
+  padding:14px 20px;
+  margin-top:auto;
+  background:rgba(0,0,0,0.2);
+  border-top:1px solid var(--glass-border);
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  min-height:72px;
+  gap:12px;
+}
+.phase-footer .footer-label{font-size:0.75rem;color:var(--muted);white-space:nowrap;}
+.phase-footer .footer-sub{font-size:0.68rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.phase-footer .footer-num{font-size:2.6rem;font-weight:800;line-height:1;text-align:right;min-width:80px;}
+.footer-num.n1{color:#ff8870;text-shadow:0 0 20px rgba(255,100,80,0.3);}
+.footer-num.n2{color:#00dc8c;text-shadow:0 0 20px rgba(0,220,140,0.3);}
+
+/* ── AVAILABILITY GRID ── */
+.avail-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
+.avail-tile{
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--glass-border);
+  border-radius:10px;
+  padding:14px 16px;
+  text-align:center;
+}
+.avail-tile .av-label{font-size:0.7rem;color:var(--muted);margin-bottom:6px;font-weight:500;}
+.avail-tile .av-num{font-size:1.8rem;font-weight:800;}
+.avail-tile .av-sub{font-size:0.68rem;color:var(--muted);margin-top:4px;}
+.av-num.ok{color:var(--green);text-shadow:0 0 16px rgba(0,229,160,0.3);}
+.av-num.bad{color:var(--red);text-shadow:0 0 16px rgba(255,79,106,0.3);}
+.av-num.neutral{color:var(--cyan);}
+
+/* ── CSV DROP ZONE ── */
+.drop-zone{
+  border:2px dashed rgba(0,212,255,0.25);
+  border-radius:12px;
+  padding:22px 20px;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .2s, background .2s;
+  position:relative;
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--cyan);
+  background:rgba(0,212,255,0.05);
+}
+.drop-zone input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.drop-icon{font-size:1.8rem;margin-bottom:6px;}
+.drop-text{font-size:0.82rem;color:var(--muted);}
+.drop-text strong{color:var(--cyan);}
+.pph-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  background:rgba(0,229,160,0.08);
+  border:1px solid rgba(0,229,160,0.25);
+  border-radius:10px;
+  padding:10px 16px;
+  margin-top:14px;
+}
+.pph-badge .pph-val{font-size:1.4rem;font-weight:800;color:var(--green);}
+.pph-badge .pph-label{font-size:0.75rem;color:var(--muted);line-height:1.4;}
+.pph-badge .pph-label strong{color:var(--text);display:block;}
+
+/* ── PICKER SECTION ── */
+.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+.picker-card{
+  background:var(--glass);
+  border:1px solid rgba(160,100,255,0.2);
+  border-radius:16px;
+  padding:18px 22px;
+}
+.picker-card h3{font-size:0.75rem;font-weight:700;color:#b87fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;}
+.picker-row{display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:4px 0;}
+.picker-row span:first-child{color:var(--muted);}
+.picker-row span:last-child{font-weight:700;color:var(--text);}
+.picker-total{
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--glass-border);
+  display:flex;justify-content:space-between;align-items:flex-end;
+}
+.picker-total .pt-label{font-size:0.75rem;color:var(--muted);}
+.picker-total .pt-num{font-size:2.2rem;font-weight:800;color:#b87fff;text-shadow:0 0 16px rgba(180,120,255,0.35);}
+
+/* ── FULL HC SUMMARY ── */
+.hc-summary{
+  background:linear-gradient(135deg,rgba(0,60,160,0.3),rgba(0,30,80,0.4));
+  border:1px solid rgba(0,212,255,0.2);
+  border-radius:16px;
+  padding:22px 26px;
+  margin-bottom:18px;
+}
+.hc-summary h2{font-size:0.72rem;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;}
+.hc-phases{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.hc-phase{background:rgba(0,0,0,0.2);border-radius:12px;padding:16px 18px;}
+.hc-phase-title{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+.hc-phase-title.p1{color:#ff8870;}
+.hc-phase-title.p2{color:#00dc8c;}
+.hc-line{display:flex;justify-content:space-between;font-size:0.8rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.hc-line:last-child{border-bottom:none;}
+.hc-line span:first-child{color:var(--muted);}
+.hc-line span:last-child{font-weight:600;color:var(--text);}
+.hc-line.total-line span{color:#fff;font-weight:800;font-size:0.9rem;}
+.hc-line.total-line{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1);}
+
+/* ── TPH CALCULATOR ── */
+.tph-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+.tph-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.tph-tile{
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--glass-border);
+  border-radius:10px;
+  padding:14px 16px;
+  text-align:center;
+}
+.tph-tile .tph-label{font-size:0.68rem;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.tph-tile .tph-val{font-size:1.9rem;font-weight:800;}
+.tph-tile .tph-sub{font-size:0.68rem;color:var(--muted);margin-top:4px;}
+.tph-tile.gross .tph-val{color:#f78166;}
+.tph-tile.net .tph-val{color:var(--cyan);}
+.tph-tile.weighted .tph-val{color:#b87fff;}
+.tph-formula{
+  background:rgba(0,0,0,0.2);
+  border:1px solid var(--glass-border);
+  border-radius:8px;
+  padding:10px 14px;
+  font-size:0.75rem;
+  color:var(--muted);
+  margin-top:12px;
+  line-height:1.7;
+}
+.tph-formula strong{color:var(--text);}
+
+/* ── METHODOLOGY SECTION ── */
+.method-section{
+  background:rgba(0,0,0,0.2);
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  padding:24px 28px;
+  margin-bottom:18px;
+}
+.method-section h2{
+  font-size:0.72rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;
+  margin-bottom:18px;
+  display:flex;align-items:center;gap:10px;
+}
+.method-section h2::after{content:'';flex:1;height:1px;background:var(--glass-border);}
+.method-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin-bottom:18px;
+  align-items:stretch;
+}
+.method-block{
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--glass-border);
+  border-radius:10px;
+  padding:14px 16px;
+  display:flex;flex-direction:column;
+}
+.method-block .mb-title{
+  font-size:0.65rem;font-weight:700;color:var(--cyan);
+  text-transform:uppercase;letter-spacing:.1em;
+  margin-bottom:10px;
+  padding-bottom:6px;
+  border-bottom:1px solid var(--glass-border);
+}
+.method-block .mb-row{
+  display:flex;justify-content:space-between;
+  font-size:0.78rem;padding:3px 0;
+  min-height:22px;align-items:center;
+}
+.method-block .mb-row span:first-child{color:var(--muted);white-space:nowrap;}
+.method-block .mb-row span:last-child{color:var(--text);font-weight:600;white-space:nowrap;text-align:right;}
+.method-formula{
+  background:rgba(0,212,255,0.04);
+  border:1px solid rgba(0,212,255,0.12);
+  border-radius:10px;
+  padding:16px 20px;
+  margin-bottom:14px;
+}
+.method-formula .mf-title{
+  font-size:0.65rem;font-weight:700;color:var(--cyan);
+  text-transform:uppercase;letter-spacing:.1em;
+  margin-bottom:12px;
+}
+.method-formula .mf-steps{
+  display:flex;flex-direction:column;gap:6px;
+}
+.method-formula .mf-step{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:0.78rem;
+}
+.method-formula .mf-num{
+  width:20px;height:20px;border-radius:50%;
+  background:rgba(0,212,255,0.15);
+  color:var(--cyan);font-size:0.68rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.method-formula .mf-text{color:var(--muted);line-height:1.5;}
+.method-formula .mf-text strong{color:var(--text);}
+.method-roles{
+  display:flex;flex-wrap:wrap;gap:8px;
+}
+.method-role-tag{
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--glass-border);
+  border-radius:6px;
+  padding:4px 10px;
+  font-size:0.72rem;
+  color:var(--muted);
+}
+.method-role-tag strong{color:var(--text);}
+
+.hidden{display:none!important;}
+
+@keyframes lpmPulse{
+  0%,100%{transform:scale(1);opacity:0.6;}
+  50%{transform:scale(1.3);opacity:1;}
+}
+
+@media(max-width:720px){
+  .phases,.avail-grid{grid-template-columns:1fr;}
+  .input-row{grid-template-columns:1fr 1fr;}
+  .hero-num{font-size:3.5rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="site">DNZ2 — Labor Planning Model</div>
+    <div class="sub">Volume → Sort-Associate Headcount · Two-phase (German LPM)</div>
+  </div>
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;">
+    <div style="position:absolute;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.25) 0%,transparent 70%);animation:lpmPulse 2.5s ease-in-out infinite;"></div>
+    <div style="position:relative;font-size:1.8rem;font-weight:800;letter-spacing:.15em;color:var(--cyan);text-shadow:0 0 10px rgba(0,212,255,0.6),0 0 30px rgba(0,212,255,0.3),0 0 60px rgba(0,90,200,0.2);font-family:'Inter',sans-serif;background:linear-gradient(180deg,#00d4ff 0%,#0099bb 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 8px rgba(0,212,255,0.5));">LPM</div>
+  </div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.18);border-radius:20px;padding:5px 14px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#005bff,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;color:#fff;letter-spacing:.02em;">SE</div>
+      <div>
+        <div style="font-size:0.72rem;color:var(--muted);line-height:1;">Created by</div>
+        <div style="font-size:0.8rem;font-weight:700;color:var(--cyan);line-height:1.3;">seyamac</div>
+      </div>
+    </div>
+    <div class="dot"></div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- INPUT CARD -->
+  <div class="glass">
+    <div class="section-head">Daily Inputs</div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:6px;">
+      <div class="field">
+        <label>DNZ2 Volume · <a href="https://perfectmile.amazon.com/dashboards/82530/region/EU/daily?tab=443267&start-date=2026-06-28&end-date=2026-07-04&drilldowns=location&flip-view=1&flip-view-date=2026-06-30&filter-in-location=%5BONW3%2CDNZ2%5D" target="_blank" style="color:var(--cyan);text-decoration:none;">↗ STVM</a></label>
+        <input type="number" id="totalVol" placeholder="e.g. 62000" min="0"/>
+      </div>
+      <div class="field">
+        <label>ONW3 Volume · <a href="https://perfectmile.amazon.com/dashboards/82530/region/EU/daily?tab=443267&start-date=2026-06-28&end-date=2026-07-04&drilldowns=location&flip-view=1&flip-view-date=2026-06-30&filter-in-location=%5BONW3%2CDNZ2%5D" target="_blank" style="color:var(--cyan);text-decoration:none;">↗ STVM</a></label>
+        <input type="number" id="onw3PickVol" placeholder="e.g. 2500" min="0" value="0"/>
+      </div>
+      <div class="field">
+        <label>SD_A Volume · <a href="https://us-east-1.quicksight.aws.amazon.com/sn/account/amzlbiaquicksight/dashboards/bf263f49-6b3b-4aac-8a6a-0d11b931ab14/sheets/bf263f49-6b3b-4aac-8a6a-0d11b931ab14_d0056b83-8014-4717-8fc6-ccd0861760d9?sso_login=true#" target="_blank" style="color:var(--cyan);text-decoration:none;">↗ Forecast</a></label>
+        <input type="number" id="sdaPickVol" placeholder="e.g. 500" min="0" value="0"/>
+      </div>
+      <div class="field">
+        <label>Planned HC · <a href="https://us-east-1.quicksight.aws.amazon.com/sn/account/saras-quicksight-prod/dashboards/661e505b-2cb2-450a-abc2-e7d595cc94aa?directory_alias=saras-quicksight-prod&edap=true&qs-signin-user-auth=false#" target="_blank" style="color:var(--cyan);text-decoration:none;">↗ AT+</a></label>
+        <input type="number" id="plannedHC" placeholder="e.g. 70" min="0"/>
+      </div>
+      <div class="field">
+        <label>Absence Rate % · <a href="https://perfectmile.a2z.com/metric_details?profileBusiness=AMZL&profileRegion=EU&profileCountry=DE&metricTechnicalName=total_unplanned_absence&metricDisplayName=Total+Unexpected+Absence+%28Daily%29&metricFormat=Percentage&metricValue=0.10282959087432686&periodicity=DAILY&startDate=2026-06-29&endDate=2026-06-29&scopeType=station&scopeValue=DNZ2&selectedTab=undefined&pageFilters=%7B%22filters%22%3A%7B%22metricDetails%22%3A%7B%22location_type%22%3A%5B%223P%22%2C%22DS%22%2C%22SC%22%2C%22XP%22%2C%22HQ%22%2C%22WW%22%5D%7D%7D%7D&watsonPage=undefined&watsonSection=undefined&watsonCaseId=undefined&from=metrics&drilldownCardIndex=undefined" target="_blank" style="color:var(--cyan);text-decoration:none;">↗ Caravan</a></label>
+        <input type="number" id="absenceRate" placeholder="e.g. 12" min="0" max="100" step="0.5" value="5"/>
+      </div>
+      <div class="field">
+        <label>Oversize % · <a href="https://us-east-1.quicksight.aws.amazon.com/sn/account/amzlbiaquicksight/dashboards/0667888e-0923-4c54-bf90-535794db34ef/sheets/0667888e-0923-4c54-bf90-535794db34ef_cd3ed1f5-2eb7-4f28-99ca-50f7c97e68ec" target="_blank" style="color:var(--cyan);text-decoration:none;">↗ OV OFD</a></label>
+        <input type="number" id="oversizePct" placeholder="e.g. 10" min="0" max="100" step="0.5" value="0"/>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:18px;">Shift Timing</div>
+    <div class="input-row">
+      <div class="field">
+        <label>Shift Start</label>
+        <input type="time" id="shiftStart" value="01:00"/>
+      </div>
+      <div class="field">
+        <label>Break Start</label>
+        <input type="time" id="breakStart" value="04:55"/>
+      </div>
+      <div class="field">
+        <label>Break End</label>
+        <input type="time" id="breakEnd" value="05:30"/>
+      </div>
+      <div class="field">
+        <label>Induction End</label>
+        <input type="time" id="inductEnd" value="09:30"/>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:18px;">Sortation Performance — Week-1 CSV <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:0.7rem;">(upload last week's data · overrides default PPH 350)</span></div>
+    <div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:8px;">📦 Stower rate (BOX-TYPE CSV · <strong style="color:var(--cyan);">Week-1</strong>) · <a href="https://fclm-portal.amazon.com/ppa/inspect/process?primaryAttribute=WORK_FLOW&secondaryAttribute=BOX_TYPE&nodeType=DS&warehouseId=DNZ2&processId=100541&startDateDay=2026%2F06%2F30&spanType=Week&startDateWeek=2026%2F07%2F01&startDateMonth=2026%2F07%2F01&maxIntradayDays=1&startDateIntraday=2026%2F07%2F01&startHourIntraday=0&startMinuteIntraday=0&endDateIntraday=2026%2F07%2F01&endHourIntraday=0&endMinuteIntraday=0" target="_blank" style="color:var(--cyan);text-decoration:none;">↗ Open in FCLM (Week-1)</a></div>
+      <div class="drop-zone" id="dropZone" ondragover="dzDrag(event,'dropZone')" ondragleave="dzLeave('dropZone')" ondrop="dzDrop(event,'stow')">
+        <input type="file" accept=".csv" id="csvFile" onchange="handleCSV(this.files[0],'stow')"/>
+        <div class="drop-icon">📂</div>
+        <div class="drop-text"><strong>Drop Week-1 BOX-TYPE CSV</strong> or click</div>
+      </div>
+      <div id="pphResult" class="hidden">
+        <div class="pph-badge">
+          <div class="pph-val" id="pphVal">—</div>
+          <div class="pph-label"><strong id="pphStrong">—</strong>Week-1 avg UPH · replaces default 350</div>
+        </div>
+      </div>
+    </div>
+
+
+    <button class="btn-calc" onclick="calculate()">&#9654; Calculate Headcount</button>
+  </div>
+
+  <!-- RESULTS (hidden until calculated) -->
+  <div id="results" class="hidden">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-label">Total Sort Associates Needed</div>
+      <div class="hero-num" id="heroNum">—</div>
+      <div class="hero-desc" id="heroDesc"></div>
+    </div>
+
+    <!-- STAFFING BAR -->
+    <div class="staffing-bar">
+      <div>
+        <div class="label">Staffing plan — available HC after <span id="bufferLabel">5</span>% absence</div>
+        <div class="plan-text" id="planText">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="text-align:center;">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">TPH / AA</div>
+          <div id="tph_display" style="font-size:1.6rem;font-weight:800;color:var(--cyan);">—</div>
+        </div>
+        <div class="total-badge" id="totalBadge">TOTAL —</div>
+      </div>
+    </div>
+
+    <!-- FULL HC SUMMARY BEFORE/AFTER BREAK -->
+    <div class="hc-summary">
+      <h2>Full Headcount Split — Before &amp; After Break</h2>
+      <div class="hc-phases">
+        <div class="hc-phase">
+          <div class="hc-phase-title p1">① Before Break <span id="hc_bb_time" style="font-weight:400;opacity:.7;"></span></div>
+          <div class="hc-line"><span>Induction SAs</span><span id="hcs_bb_ind">—</span></div>
+          <div class="hc-line"><span>Sort SAs (A+D)</span><span id="hcs_bb_sort">—</span></div>
+          <div class="hc-line"><span>Pickers ONW3</span><span id="hcs_bb_pick_onw3">—</span></div>
+          <div class="hc-line"><span>Pickers SD_A</span><span id="hcs_bb_pick_sda">—</span></div>
+          <div class="hc-line"><span>Fixed roles</span><span id="hcs_bb_fixed">—</span></div>
+          <div class="hc-line total-line"><span>Total needed</span><span id="hcs_bb_total">—</span></div>
+        </div>
+        <div class="hc-phase">
+          <div class="hc-phase-title p2">② After Break <span id="hc_ab_time" style="font-weight:400;opacity:.7;"></span></div>
+          <div class="hc-line"><span>Induction SAs</span><span id="hcs_ab_ind">—</span></div>
+          <div class="hc-line"><span>Sort SAs (A+D)</span><span id="hcs_ab_sort">—</span></div>
+          <div class="hc-line"><span>Pickers ONW3</span><span id="hcs_ab_pick_onw3">—</span></div>
+          <div class="hc-line"><span>Pickers SD_A</span><span id="hcs_ab_pick_sda">—</span></div>
+          <div class="hc-line"><span>Fixed roles</span><span id="hcs_ab_fixed">—</span></div>
+          <div class="hc-line total-line"><span>Total needed</span><span id="hcs_ab_total">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PICKER CARDS -->
+    <div class="picker-grid" id="pickerSection" style="display:none;">
+      <div class="picker-card">
+        <h3>🛤 ONW3 Aisle — Pickers</h3>
+        <div class="picker-row"><span>Pick Volume</span><span id="pk_onw3_vol">—</span></div>
+        <div class="picker-row"><span>Picker UPH (D-1)</span><span id="pk_onw3_uph">—</span></div>
+        <div class="picker-row"><span>Before break</span><span id="pk_onw3_bb">—</span></div>
+        <div class="picker-row"><span>After break</span><span id="pk_onw3_ab">—</span></div>
+        <div class="picker-total">
+          <div class="pt-label">Max needed (incl. buffer)</div>
+          <div class="pt-num" id="pk_onw3_total">—</div>
+        </div>
+      </div>
+      <div class="picker-card">
+        <h3>🛤 SD_A Aisle — Pickers</h3>
+        <div class="picker-row"><span>Pick Volume</span><span id="pk_sda_vol">—</span></div>
+        <div class="picker-row"><span>Picker UPH (D-1)</span><span id="pk_sda_uph">—</span></div>
+        <div class="picker-row"><span>Before break</span><span id="pk_sda_bb">—</span></div>
+        <div class="picker-row"><span>After break</span><span id="pk_sda_ab">—</span></div>
+        <div class="picker-total">
+          <div class="pt-label">Max needed (incl. buffer)</div>
+          <div class="pt-num" id="pk_sda_total">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPEED BANNER -->
+    <div class="glass" style="margin-bottom:18px;">
+      <div class="section-head">Required Throughput Speed</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(255,136,112,0.25);border-radius:12px;padding:16px 20px;">
+          <div style="font-size:0.68rem;color:#ff8870;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:8px;">⚡ Before Break</div>
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span id="bb_speed_big" style="font-size:2.4rem;font-weight:800;color:#ff8870;text-shadow:0 0 20px rgba(255,136,112,0.4);">—</span>
+            <span style="font-size:0.85rem;color:var(--muted);">pkgs / hr</span>
+          </div>
+          <div id="bb_speed_sub" style="font-size:0.75rem;color:var(--muted);margin-top:6px;"></div>
+        </div>
+        <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(0,220,140,0.25);border-radius:12px;padding:16px 20px;">
+          <div style="font-size:0.68rem;color:#00dc8c;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:8px;">⚡ After Break</div>
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span id="ab_speed_big" style="font-size:2.4rem;font-weight:800;color:#00dc8c;text-shadow:0 0 20px rgba(0,220,140,0.4);">—</span>
+            <span style="font-size:0.85rem;color:var(--muted);">pkgs / hr</span>
+          </div>
+          <div id="ab_speed_sub" style="font-size:0.75rem;color:var(--muted);margin-top:6px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE CARDS -->
+    <div class="phases">
+      <!-- BEFORE BREAK -->
+      <div class="phase-card">
+        <div class="phase-header">
+          <div class="phase-badge b1">1</div>
+          <div class="phase-title t1">Before Break</div>
+          <div style="margin-left:auto;font-size:0.72rem;color:var(--muted);" id="bb_timerange">01:00 → 04:55</div>
+        </div>
+        <div class="phase-body">
+          <div class="rates-label">Derived &amp; Headcount</div>
+          <div class="phase-field-row"><span class="pf-label">Planning Volume</span><span id="bb_vol" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">pkgs</span></div>
+          <div class="phase-field-row"><span class="pf-label">BRT (net work time)</span><span id="bb_brt" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">h</span></div>
+          <div class="phase-field-row"><span class="pf-label">Induction machines</span><span id="bb_mach" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">mach</span></div>
+          <div class="phase-field-row"><span class="pf-label">Induction SAs</span><span id="bb_ind" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-field-row"><span class="pf-label">Sort SAs (Aisle A+D)</span><span id="bb_sort" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-field-row"><span class="pf-label">Cart Runners (1/table)</span><span id="bb_cart" style="font-size:0.9rem;color:var(--cyan);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-field-row"><span class="pf-label">Fixed roles</span><span id="bb_fixed" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-footer">
+            <div>
+              <div class="footer-label">Before Break — SAs needed</div>
+              <div class="footer-sub" id="bb_footer_sub">—</div>
+            </div>
+            <div class="footer-num n1" id="bb_total">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AFTER BREAK -->
+      <div class="phase-card">
+        <div class="phase-header">
+          <div class="phase-badge b2">2</div>
+          <div class="phase-title t2">After Break</div>
+          <div style="margin-left:auto;font-size:0.72rem;color:var(--muted);" id="ab_timerange">05:30 → 09:30</div>
+        </div>
+        <div class="phase-body">
+          <div class="rates-label">Derived &amp; Headcount</div>
+          <div class="phase-field-row"><span class="pf-label">Planning Volume</span><span id="ab_vol" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">pkgs</span></div>
+          <div class="phase-field-row"><span class="pf-label">BRT (net work time)</span><span id="ab_brt" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">h</span></div>
+          <div class="phase-field-row"><span class="pf-label">Induction machines</span><span id="ab_mach" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">mach</span></div>
+          <div class="phase-field-row"><span class="pf-label">Induction SAs</span><span id="ab_ind" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-field-row"><span class="pf-label">Sort SAs (Aisle A+D)</span><span id="ab_sort" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-field-row"><span class="pf-label">Cart Runners (1/table)</span><span id="ab_cart" style="font-size:0.9rem;color:var(--cyan);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-field-row"><span class="pf-label">Fixed roles</span><span id="ab_fixed" style="font-size:0.9rem;color:var(--text);font-weight:600;">—</span><span class="pf-unit">SAs</span></div>
+          <div class="phase-footer">
+            <div>
+              <div class="footer-label">After Break — SAs needed</div>
+              <div class="footer-sub" id="ab_footer_sub">—</div>
+            </div>
+            <div class="footer-num n2" id="ab_total">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AVAILABILITY -->
+    <div class="glass">
+      <div class="section-head">Headcount Availability</div>
+      <div class="avail-grid">
+        <div class="avail-tile">
+          <div class="av-label">Planned HC</div>
+          <div class="av-num neutral" id="av_planned">—</div>
+          <div class="av-sub">from shift plan</div>
+        </div>
+        <div class="avail-tile">
+          <div class="av-label">Absence Rate</div>
+          <div class="av-num" id="av_buffer" style="color:var(--red);">—</div>
+          <div class="av-sub">deducted from planned</div>
+        </div>
+        <div class="avail-tile">
+          <div class="av-label">Available HC</div>
+          <div class="av-num neutral" id="av_avail">—</div>
+          <div class="av-sub">after absence deduction</div>
+        </div>
+        <div class="avail-tile">
+          <div class="av-label">Needed (max)</div>
+          <div class="av-num neutral" id="av_needed">—</div>
+          <div class="av-sub">raw HC required</div>
+        </div>
+        <div class="avail-tile">
+          <div class="av-label">Delta</div>
+          <div class="av-num" id="av_delta">—</div>
+          <div class="av-sub" id="av_delta_sub">—</div>
+        </div>
+        <div class="avail-tile">
+          <div class="av-label">Action</div>
+          <div class="av-num" id="av_action" style="font-size:1.2rem;">—</div>
+          <div class="av-sub" id="av_action_sub">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- METHODOLOGY -->
+    <div class="method-section">
+      <h2>📋 Planning Assumptions &amp; Methodology</h2>
+
+      <!-- KEY PARAMETERS GRID -->
+      <div class="method-grid">
+        <div class="method-block">
+          <div class="mb-title">⏱ Shift Timing</div>
+          <div class="mb-row"><span>Shift Start</span><span id="m_shiftStart">—</span></div>
+          <div class="mb-row"><span>Break</span><span id="m_break">—</span></div>
+          <div class="mb-row"><span>Induction End</span><span id="m_inductEnd">—</span></div>
+          <div class="mb-row"><span>Phase 1 BRT</span><span id="m_bb_brt">—</span></div>
+          <div class="mb-row"><span>Phase 2 BRT</span><span id="m_ab_brt">—</span></div>
+          <div class="mb-row"><span>Oversize %</span><span id="m_ov">—</span></div>
+        </div>
+        <div class="method-block">
+          <div class="mb-title">📦 Volume &amp; Rates</div>
+          <div class="mb-row"><span>Total</span><span id="m_vol">—</span></div>
+          <div class="mb-row"><span>Phase 1 (45%+SD_A)</span><span id="m_bb_vol">—</span></div>
+          <div class="mb-row"><span>Phase 2 (55%+SD_A)</span><span id="m_ab_vol">—</span></div>
+          <div class="mb-row"><span>Stower PPH (eff.)</span><span id="m_pph">—</span></div>
+          <div class="mb-row"><span>Induction (eff.)</span><span id="m_induct_rate">—</span></div>
+          <div class="mb-row"><span>SD_A Pickers</span><span id="m_sda_pick">—</span></div>
+        </div>
+        <div class="method-block">
+          <div class="mb-title">👥 Headcount</div>
+          <div class="mb-row"><span>Absence Rate</span><span id="m_buffer">—</span></div>
+          <div class="mb-row"><span>Aisle Split A/D</span><span>50% / 50%</span></div>
+          <div class="mb-row"><span>NS (Phase 1)</span><span id="m_bb_hc">—</span></div>
+          <div class="mb-row"><span>MCO (Phase 2 extra)</span><span id="m_mco_hc">—</span></div>
+          <div class="mb-row"><span>Total needed</span><span id="m_max_hc">—</span></div>
+          <div class="mb-row"><span>Available HC</span><span id="m_avail_hc">—</span></div>
+        </div>
+      </div>
+
+      <!-- FORMULA STEPS -->
+      <div class="method-formula">
+        <div class="mf-title">How the HC is calculated — step by step</div>
+        <div class="mf-steps">
+          <div class="mf-step"><div class="mf-num">1</div><div class="mf-text"><strong>Volume split:</strong> Before break = (DNZ2 + ONW3) × 45% + SD_A × 60% · After break = (DNZ2 + ONW3) × 55% + SD_A × 40%</div></div>
+          <div class="mf-step"><div class="mf-num">2</div><div class="mf-text"><strong>BRT (net work time):</strong> Phase 1: gross − 7 min SOS · Phase 2: gross − 25 min (EOS + short breaks)</div></div>
+          <div class="mf-step"><div class="mf-num">3</div><div class="mf-text"><strong>Oversize penalty:</strong> Induction rate × (normal% + OV%/1.5) · Stower PPH × (normal% + OV%/2) — large packages slow both processes</div></div>
+          <div class="mf-step"><div class="mf-num">4</div><div class="mf-text"><strong>Required speed:</strong> Phase volume ÷ BRT = pkgs/hr needed from the belt</div></div>
+          <div class="mf-step"><div class="mf-num">5</div><div class="mf-text"><strong>Induction machines:</strong> ⌈Speed ÷ effective induction rate⌉ · Tables: ASL1(3), ASL2(2), ASL3(2), ASML1(3), ASML2(3), ASML3(3), <strong>7th = Flex Conveyor(3 SAs + 1 Cart Runner)</strong> · Cart runner = 1/machine</div></div>
+          <div class="mf-step"><div class="mf-num">6</div><div class="mf-text"><strong>Sort SAs per aisle:</strong> ⌈(Phase vol × 50%) ÷ effective PPH ÷ BRT⌉ × 2 aisles (A + D)</div></div>
+          <div class="mf-step"><div class="mf-num">7</div><div class="mf-text"><strong>Pickers ONW3:</strong> 1 per 2,500 packages · split 45/55 · additional HC</div></div>
+          <div class="mf-step"><div class="mf-num">8</div><div class="mf-text"><strong>Pickers SD_A:</strong> 4 aisles · 2h · 50 pkg/hr/person · <strong>additional HC</strong> — sort floor needs full team for continuous DNZ2+ONW3 volume during pick window</div></div>
+          <div class="mf-step"><div class="mf-num">9</div><div class="mf-text"><strong>ADTA Straighteners:</strong> 2 if speed &lt; 10k · 4 if speed ≥ 10k (2/position × 2 positions)</div></div>
+          <div class="mf-step"><div class="mf-num">9b</div><div class="mf-text"><strong>NC Stowers:</strong> 1 base · <strong>+1 after break if oversize volume ≥ 4,500 pkgs</strong> (total vol × OV%)</div></div>
+          <div class="mf-step"><div class="mf-num">10</div><div class="mf-text"><strong>Fixed roles:</strong> YM 2 + Quality 3 + PS 4 + Jackpots 2 + NC 1 + PS Bin 1 + C Pusher 1 + Water Spider 3 + ATLAS 1 + Cart Runners + ADTA</div></div>
+          <div class="mf-step"><div class="mf-num">11</div><div class="mf-text"><strong>Total HC:</strong> Induction + Sort + ONW3 Pickers + Fixed — no buffer multiplier applied</div></div>
+          <div class="mf-step"><div class="mf-num">12</div><div class="mf-text"><strong>NS + MCO:</strong> NS = before break HC · MCO = after break − before break (extra heads) · Total = NS + MCO</div></div>
+          <div class="mf-step"><div class="mf-num">13</div><div class="mf-text"><strong>Available HC:</strong> Planned HC × (1 − Absence Rate %) · Delta = Available − Needed → VET if negative, VTO if positive</div></div>
+        </div>
+      </div>
+
+      <!-- FIXED ROLES -->
+      <div style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Fixed Roles included in every phase</div>
+      <div class="method-roles">
+        <div class="method-role-tag">Yard Marshalls <strong>×2</strong></div>
+        <div class="method-role-tag">Quality <strong>×3</strong></div>
+        <div class="method-role-tag">Problem Solve <strong>×4</strong></div>
+        <div class="method-role-tag">Cart Runner <strong>×machines</strong></div>
+        <div class="method-role-tag">Jackpots A+D <strong>×2</strong></div>
+        <div class="method-role-tag">NC Stowers <strong>×1 (×2 if OV≥4.5k after break)</strong></div>
+        <div class="method-role-tag">PS Bin <strong>×1</strong></div>
+        <div class="method-role-tag">C Pusher <strong>×1</strong></div>
+        <div class="method-role-tag">Water Spider IB <strong>×3</strong></div>
+        <div class="method-role-tag">ATLAS <strong>×1</strong></div>
+        <div class="method-role-tag">ADTA Straighteners <strong>×2 or ×4</strong></div>
+        <div class="method-role-tag">Total fixed <strong>×18 + cart + ADTA</strong></div>
+      </div>
+
+      <div style="margin-top:16px;font-size:0.72rem;color:var(--muted);line-height:1.7;border-top:1px solid var(--glass-border);padding-top:14px;">
+        <strong style="color:var(--text);">Data sources:</strong>
+        Stower PPH from <em>processInspector BOX-TYPE CSV (weekly)</em> or default 350 ·
+        ONW3 pickers: 1 per 2,500 pkgs · SD_A pickers: 4 aisles / 2h / 50 pkg/hr (additional HC) ·
+        Volume from <em>PerfectMile STVM</em> · SD_A forecast from <em>QuickSight</em> ·
+        Planned HC from <em>AT+ shift plan</em> · Absence rate from <em>Caravan</em> (deducted from planned HC) ·
+        Oversize % from <em>OV OFD QuickSight</em> (degrades induction ×1.5 and stow ×2) ·
+        Cross-midnight shifts handled automatically (e.g. 23:45 start)
+      </div>
+    </div>
+
+  </div><!-- /results -->
+</div><!-- /main -->
+
+<script>
+// ── CLOCK ──────────────────────────────────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// ── CSV UPLOAD ─────────────────────────────────────────────────────────────
+let PPH_WEEKLY = null;  // weekly avg from CSV
+
+function dzDrag(e, id){ e.preventDefault(); document.getElementById(id).classList.add('drag-over'); }
+function dzLeave(id){ document.getElementById(id).classList.remove('drag-over'); }
+function dzDrop(e, type){
+  e.preventDefault();
+  dzLeave('dropZone');
+  const f = e.dataTransfer.files[0];
+  if(f) handleCSV(f, type);
+}
+
+function handleCSV(file, type) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split('\n');
+    const employees = {};
+    // Track box type volumes for sortation mix
+    const boxTypeStats = {};
+
+    for (let i = 1; i < lines.length; i++) {
+      const row = parseCSVRow(lines[i]);
+      if (row.length < 12) continue;
+      const empId       = row[0].replace(/"/g,'').trim();
+      const units       = parseFloat(row[3]) || 0;
+      const hoursDirect = parseFloat(row[5]) || 0;
+      const hoursTotal  = parseFloat(row[7]) || 0;
+      const boxType     = row[11] ? row[11].replace(/"/g,'').trim() : '';
+      if (!empId) continue;
+      const hours = hoursDirect > 0 ? hoursDirect : hoursTotal;
+      if (hours === 0) continue;
+      if (!employees[empId]) employees[empId] = { units:0, hours:0 };
+      employees[empId].units += units;
+      employees[empId].hours += hours;
+
+      // Aggregate by box type
+      if (boxType && units > 0) {
+        if (!boxTypeStats[boxType]) boxTypeStats[boxType] = { units: 0, hours: 0 };
+        boxTypeStats[boxType].units += units;
+        boxTypeStats[boxType].hours += hours;
+      }
+    }
+    const empList = Object.values(employees).filter(e => e.hours > 0);
+    if (empList.length === 0) {
+      alert(`Could not parse CSV — no employees with hours found.\nFile: ${file.name}`);
+      return;
+    }
+    const activeList = empList.filter(e => e.units > 0);
+    if (activeList.length === 0) {
+      alert('CSV loaded but no stow units found. Keeping default PPH 350.');
+      return;
+    }
+    const totalUnits = activeList.reduce((s,e) => s+e.units, 0);
+    const totalHours = activeList.reduce((s,e) => s+e.hours, 0);
+    const pph = Math.round(totalUnits / totalHours);
+
+    PPH_WEEKLY = pph;
+    PPH = pph;
+
+    // Calculate box-type breakdown and weighted sortation PPH
+    const boxBreakdown = [];
+    let totalBoxUnits = 0;
+    for (const [bt, data] of Object.entries(boxTypeStats)) {
+      const uph = data.hours > 0 ? Math.round(data.units / data.hours) : 0;
+      boxBreakdown.push({ type: bt, units: data.units, hours: data.hours, uph });
+      totalBoxUnits += data.units;
+    }
+    boxBreakdown.sort((a,b) => b.units - a.units);
+
+    // Store box mix for D+1 HC calculation
+    window.BOX_MIX = boxBreakdown.map(b => ({
+      type: b.type,
+      pct: totalBoxUnits > 0 ? (b.units / totalBoxUnits * 100) : 0,
+      uph: b.uph
+    }));
+
+    // Auto-calculate Oversize % from CSV — for REFERENCE ONLY (displayed but NOT auto-filled)
+    // Oversize = LARGE + EXTRA LARGE + NON-CONVEYABLE + NON-CONVEYABLE PLUS
+    const oversizeTypes = ['LARGE', 'EXTRA LARGE', 'NON-CONVEYABLE', 'NON-CONVEYABLE PLUS'];
+    const oversizeUnits = boxBreakdown
+      .filter(b => oversizeTypes.includes(b.type))
+      .reduce((s, b) => s + b.units, 0);
+    const csvOversizePct = totalBoxUnits > 0 ? (oversizeUnits / totalBoxUnits * 100) : 0;
+
+    // Build display
+    let breakdownHTML = `<div style="margin-top:10px;font-size:0.68rem;color:var(--muted);"><strong style="color:var(--text);">Box-Type Mix (sortation speed):</strong></div>`;
+    breakdownHTML += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-top:6px;">`;
+    const typeColors = {'EXTRA SMALL':'#00e5a0','SMALL':'#00d4ff','MEDIUM':'#1a6fff','LARGE':'#f78166','EXTRA LARGE':'#ff4f6a','NON-CONVEYABLE':'#b87fff','NON-CONVEYABLE PLUS':'#b87fff'};
+    boxBreakdown.forEach(b => {
+      const pct = totalBoxUnits > 0 ? (b.units / totalBoxUnits * 100).toFixed(1) : 0;
+      const isOV = oversizeTypes.includes(b.type);
+      const col = typeColors[b.type] || 'var(--muted)';
+      breakdownHTML += `<div style="background:rgba(0,0,0,0.2);border:1px solid ${isOV ? 'rgba(255,79,106,0.3)' : 'var(--glass-border)'};border-radius:6px;padding:6px 8px;">
+        <div style="font-size:0.6rem;color:${col};font-weight:600;">${b.type}${isOV ? ' ⚠️' : ''}</div>
+        <div style="font-size:0.82rem;font-weight:700;color:var(--text);">${pct}%</div>
+        <div style="font-size:0.58rem;color:var(--muted);">${b.uph} UPH · ${b.units.toLocaleString()} u</div>
+      </div>`;
+    });
+    breakdownHTML += `</div>`;
+    breakdownHTML += `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,79,106,0.08);border:1px solid rgba(255,79,106,0.2);border-radius:8px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:1.3rem;font-weight:800;color:var(--red);">${csvOversizePct.toFixed(1)}%</div>
+      <div style="font-size:0.7rem;color:var(--muted);line-height:1.4;">
+        <strong style="color:var(--text);">W-1 Oversize share</strong> (Large + XL + NC + NC+)<br>
+        ${oversizeUnits.toLocaleString()} of ${totalBoxUnits.toLocaleString()} units · <em style="color:var(--cyan);">compare with D+1 forecast in Oversize % input</em>
+      </div>
+    </div>`;
+
+    document.getElementById('pphVal').textContent    = pph;
+    document.getElementById('pphStrong').textContent = `${activeList.length} stowers · ${Math.round(totalUnits).toLocaleString()} units`;
+    document.getElementById('pphResult').classList.remove('hidden');
+    document.getElementById('pphResult').innerHTML = `
+      <div class="pph-badge">
+        <div class="pph-val">${pph}</div>
+        <div class="pph-label"><strong>${activeList.length} stowers · ${Math.round(totalUnits).toLocaleString()} units</strong>Week-1 avg UPH · replaces default 350</div>
+      </div>
+      ${breakdownHTML}
+    `;
+
+    // Save to weekly history (removed — no history panels)
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVRow(line) {
+  // Handle quoted fields
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function timeToHours(t) {
+  const [h,m] = t.split(':').map(Number);
+  return h + m/60;
+}
+
+// Cross-midnight aware duration: if end < start, end is on next day (+24h)
+function phaseDuration(startT, endT) {
+  let s = timeToHours(startT);
+  let e = timeToHours(endT);
+  if (e <= s) e += 24; // crosses midnight
+  return e - s;
+}
+
+function ceil(n){ return Math.ceil(n); }
+
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+let PPH           = 350;    // stower packages/hr — overridden by BOX-TYPE CSV
+window.BOX_MIX    = null;   // box-type mix from CSV (null = not uploaded)
+const INDUCT_RATE = 1500;
+const SA_PER_MACH = 2.6;    // SAs per induction machine (legacy, now using table staffing)
+const SOS_OFFSET  = 7/60;   // start-of-shift setup minutes → hours
+const EOS_OFFSET  = 25/60;  // end-of-shift / short breaks → hours
+
+const FIXED_ROLES_BASE = {
+  "Yard Marshalls":2,"Quality":3,"Problem Solve":4,
+  "Jackpots A+D":2,"NC Stowers":1,
+  "PS Bin":1,"C Pusher":1,"Water Spider (IB)":3,"ATLAS":1
+};
+// Induction staffing: ASL1=3, ASL2=2, ASL3=2, ASML×3=9 = total 16 induction SAs
+// ADTA Straighteners: 2 if speed < 10000, 4 if speed >= 10000
+// Cart Runner: 1 per induction machine
+
+function calcPhase(vol, grossHours, isBefore, buffer, ovPct) {
+  const brt = isBefore
+    ? grossHours - SOS_OFFSET
+    : grossHours - EOS_OFFSET;
+
+  const ovFrac     = ovPct / 100;
+  const normalFrac = 1 - ovFrac;
+
+  // Sortation PPH: use CSV weighted rate if available (already reflects real box-mix performance)
+  // The Oversize % input only affects induction speed (belt/mechanical constraint)
+  // and is used to calculate oversize volume for NC stower logic
+  let effectivePPH;
+  if (window.BOX_MIX && window.BOX_MIX.length > 0) {
+    // CSV rate already accounts for all box sizes — no additional penalty needed
+    effectivePPH = PPH;
+  } else {
+    // No CSV: apply oversize penalty to default PPH (larger pkgs = slower sorting)
+    effectivePPH = PPH * (normalFrac + ovFrac / 2.0);
+  }
+
+  // Induction rate: oversize always slows the belt (mechanical constraint)
+  const effectiveInductRate = INDUCT_RATE * (normalFrac + ovFrac / 1.5);
+
+  const speed        = vol / brt;
+  const machines     = ceil(speed / effectiveInductRate);
+  // Induction SAs based on actual table staffing:
+  const tableStaffing = [3, 2, 2, 3, 3, 3, 3]; // 7 tables max
+  let indSAs = 0;
+  for (let t = 0; t < Math.min(machines, tableStaffing.length); t++) {
+    indSAs += tableStaffing[t];
+  }
+  if (machines > tableStaffing.length) {
+    indSAs += (machines - tableStaffing.length) * 3;
+  }
+  const sortPerAisle = ceil((vol * 0.5) / effectivePPH / brt);
+  const sortTotal    = sortPerAisle * 2;
+  const cartRunners  = machines;
+  const adtaStraighteners = speed >= 10000 ? 4 : 2;
+  const baseFixed    = Object.values(FIXED_ROLES_BASE).reduce((a,b)=>a+b,0);
+  const fixedTotal   = baseFixed + cartRunners + adtaStraighteners;
+  const raw          = indSAs + sortTotal + fixedTotal;
+  const withBuffer   = ceil(raw * buffer);
+  return { vol, brt, speed, machines, indSAs, sortPerAisle, sortTotal,
+           fixed: fixedTotal, cartRunners, adtaStraighteners, raw, withBuffer, effectivePPH };
+}
+
+// ── CALCULATE ──────────────────────────────────────────────────────────────
+function calculate() {
+  const totalVol    = parseFloat(document.getElementById('totalVol').value)    || 0;
+  const plannedHC   = parseFloat(document.getElementById('plannedHC').value)   || 0;
+  const onw3PickVol = parseFloat(document.getElementById('onw3PickVol').value) || 0;
+  const sdaPickVol  = parseFloat(document.getElementById('sdaPickVol').value)  || 0;
+  const absenceRate = parseFloat(document.getElementById('absenceRate').value) || 0;
+  const oversizePct = parseFloat(document.getElementById('oversizePct').value) || 0;
+  const BUFFER      = 1;  // no buffer on HC calc — absence handled on available side
+
+  const shiftStart = document.getElementById('shiftStart').value || '01:00';
+  const breakStart = document.getElementById('breakStart').value || '04:55';
+  const breakEnd   = document.getElementById('breakEnd').value   || '05:30';
+  const inductEnd  = document.getElementById('inductEnd').value  || '09:30';
+
+  if (!totalVol) { alert('Please enter a DNZ2 Volume.'); return; }
+
+  // Before break: 45% of (DNZ2 + ONW3) + 60% of SD_A on top
+  // After break: 55% of (DNZ2 + ONW3) + 40% of SD_A
+  const sortVol = totalVol + onw3PickVol;  // DNZ2 + ONW3
+  const bbVol   = sortVol * 0.45 + sdaPickVol * 0.60;  // 45% sort + 60% SD_A
+  const abVol   = sortVol * 0.55 + sdaPickVol * 0.40;  // 55% sort + 40% SD_A
+
+  const bbGross = phaseDuration(shiftStart, breakStart);
+  const abGross = phaseDuration(breakEnd, inductEnd);
+
+  const bb = calcPhase(bbVol, bbGross, true, BUFFER, oversizePct);
+  const ab = calcPhase(abVol, abGross, false, BUFFER, oversizePct);
+
+  // ── PICKER CALCULATION ──
+  // ONW3: 1 picker per 2500 packages — additional HC
+  const onw3PickBB = onw3PickVol > 0 ? ceil((onw3PickVol * 0.45) / 2500) : 0;
+  const onw3PickAB = onw3PickVol > 0 ? ceil((onw3PickVol * 0.55) / 2500) : 0;
+
+  // SD_A: 4 aisles, 2h window, 50 pkgs/hr/person — ADDITIONAL HC
+  // Sort floor still receives DNZ2+ONW3 volume during pick window, so pickers cannot be borrowed
+  const SDA_AISLES = 4;
+  const SDA_PICK_CAPACITY = 50; // 50 pkgs/hr manual finger pick per person
+  const SDA_PICK_HOURS = 2;
+  const sdaPickersTotal = sdaPickVol > 0 ? Math.min(ceil(sdaPickVol / (SDA_PICK_CAPACITY * SDA_PICK_HOURS)), SDA_AISLES) : 0;
+  // 60/40 split: more pickers needed before break, fewer after
+  const sdaPickBB = sdaPickVol > 0 ? ceil(sdaPickersTotal * 0.60) : 0;
+  const sdaPickAB = sdaPickVol > 0 ? ceil(sdaPickersTotal * 0.40) : 0;
+
+  // ALL pickers are additional HC (sort needs full team for continuous DNZ2+ONW3 volume)
+  const totalPickBB = onw3PickBB + sdaPickBB;
+  const totalPickAB = onw3PickAB + sdaPickAB;
+
+  // Extra NC Stower after break if oversize volume >= 4500 pkgs
+  const totalVolumeAll = totalVol + onw3PickVol + sdaPickVol;
+  const oversizeVolume = totalVolumeAll * (oversizePct / 100);
+  const extraNC_AB     = oversizeVolume >= 4500 ? 1 : 0;
+
+  // Full HC per phase including pickers + extra NC
+  const bbFullRaw    = bb.indSAs + bb.sortTotal + bb.fixed + totalPickBB;
+  const abFullRaw    = ab.indSAs + ab.sortTotal + ab.fixed + totalPickAB + extraNC_AB;
+  const bbFullBuf    = ceil(bbFullRaw * BUFFER);
+  const abFullBuf    = ceil(abFullRaw * BUFFER);
+
+  const available = Math.round(plannedHC * (1 - absenceRate / 100));  // planned minus unexpected absence
+  const nsHC      = bbFullBuf;                           // NS = before break HC
+  const mcoHC     = Math.max(0, abFullBuf - bbFullBuf);  // MCO = extra heads after break
+  const maxNeeded = nsHC + mcoHC;                        // Total = NS + MCO
+  const delta     = available - maxNeeded;
+
+  // ── TPH ──
+  const shiftH      = phaseDuration(shiftStart, inductEnd);
+  const breakH      = phaseDuration(breakStart, breakEnd);
+  const productiveH = shiftH - breakH - 0.5; // 0.5h indirect assumption
+  const tphPerAA    = (available > 0 && productiveH > 0)
+    ? ((totalVol + onw3PickVol + sdaPickVol) / (available * productiveH)).toFixed(0)
+    : '—';
+  document.getElementById('tph_display').textContent = tphPerAA;
+
+  // ── HERO ──
+  document.getElementById('heroNum').textContent = maxNeeded;
+  document.getElementById('heroDesc').innerHTML =
+    `<strong>NS (before break): ${nsHC}</strong> + <strong>MCO (after break extra): ${mcoHC}</strong> = <strong>${maxNeeded} total needed</strong>.<br>` +
+    `Available HC: <strong>${available}</strong> (Planned ${plannedHC} − ${absenceRate}% absence)<br>` +
+    `Before break: 45% of (DNZ2 ${totalVol.toLocaleString()} + ONW3 ${onw3PickVol.toLocaleString()}) + 60% SD_A ${sdaPickVol.toLocaleString()} = <strong>${Math.round(bbVol).toLocaleString()}</strong> pkgs  ·  ` +
+    `After break: 55% + 40% SD_A = <strong>${Math.round(abVol).toLocaleString()}</strong> pkgs<br>` +
+    `Stower PPH: <strong>${PPH}</strong>${PPH !== 350 ? ' <span style="color:var(--green);font-size:0.8rem;">← CSV</span>' : ' <span style="color:var(--muted);font-size:0.8rem;">(default)</span>'}` +
+    `  ·  ONW3: 1 picker / 2,500 pkgs  ·  SD_A: ${sdaPickersTotal} additional pickers (6 aisles, 2h window)`;
+
+  // ── STAFFING BAR ──
+  document.getElementById('planText').textContent =
+    `NS (before break): ${nsHC}  ·  MCO (after break +${mcoHC})  ·  After break total: ${abFullBuf}`;
+  document.getElementById('totalBadge').textContent = `TOTAL ${maxNeeded}`;
+  document.getElementById('bufferLabel').textContent = absenceRate;
+
+  // ── FULL HC SUMMARY ──
+  document.getElementById('hc_bb_time').textContent = `${shiftStart} → ${breakStart}`;
+  document.getElementById('hc_ab_time').textContent = `${breakEnd} → ${inductEnd}`;
+  document.getElementById('hcs_bb_ind').textContent    = bb.indSAs;
+  document.getElementById('hcs_bb_sort').textContent   = bb.sortTotal;
+  document.getElementById('hcs_bb_pick_onw3').textContent = onw3PickBB || '—';
+  document.getElementById('hcs_bb_pick_sda').textContent  = sdaPickBB  || '—';
+  document.getElementById('hcs_bb_fixed').textContent  = bb.fixed;
+  document.getElementById('hcs_bb_total').textContent  = bbFullBuf;
+  document.getElementById('hcs_ab_ind').textContent    = ab.indSAs;
+  document.getElementById('hcs_ab_sort').textContent   = ab.sortTotal;
+  document.getElementById('hcs_ab_pick_onw3').textContent = onw3PickAB || '—';
+  document.getElementById('hcs_ab_pick_sda').textContent  = sdaPickAB || '—';
+  document.getElementById('hcs_ab_fixed').textContent  = ab.fixed;
+  document.getElementById('hcs_ab_total').textContent  = abFullBuf;
+
+  // ── SPEED BANNER ──
+  document.getElementById('bb_speed_big').textContent = Math.round(bb.speed).toLocaleString();
+  document.getElementById('bb_speed_sub').textContent =
+    `${Math.round(bbVol).toLocaleString()} pkgs ÷ ${bb.brt.toFixed(2)}h BRT (−7min SOS) · ${bb.machines} machines`;
+  document.getElementById('ab_speed_big').textContent = Math.round(ab.speed).toLocaleString();
+  document.getElementById('ab_speed_sub').textContent =
+    `${Math.round(abVol).toLocaleString()} pkgs ÷ ${ab.brt.toFixed(2)}h BRT (−25min EOS) · ${ab.machines} machines`;
+
+  // ── TIME RANGES (include SOS offset for before break) ──
+  function addMinutes(timeStr, mins) {
+    let [h, m] = timeStr.split(':').map(Number);
+    m += mins;
+    if (m >= 60) { h += Math.floor(m/60); m %= 60; }
+    if (h >= 24) h -= 24;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  document.getElementById('bb_timerange').textContent = `${addMinutes(shiftStart, 7)} → ${breakStart} (−7min SOS)`;
+  document.getElementById('ab_timerange').textContent = `${breakEnd} → ${inductEnd}`;
+
+  // ── PHASE CARDS (sort only, as before) ──
+  document.getElementById('bb_vol').textContent   = Math.round(bbVol).toLocaleString();
+  document.getElementById('bb_brt').textContent   = bb.brt.toFixed(2);
+  document.getElementById('bb_mach').textContent  = bb.machines;
+  document.getElementById('bb_ind').textContent   = bb.indSAs;
+  document.getElementById('bb_sort').textContent  = `${bb.sortTotal} (${bb.sortPerAisle}+${bb.sortPerAisle})`;
+  document.getElementById('bb_cart').textContent  = bb.cartRunners;
+  document.getElementById('bb_fixed').textContent = bb.fixed;
+  document.getElementById('bb_total').textContent = bbFullBuf;
+  document.getElementById('bb_footer_sub').textContent =
+    `Ind ${bb.indSAs} + Sort ${bb.sortTotal} + Pick ${totalPickBB} + Fixed ${bb.fixed}`;
+  document.getElementById('ab_vol').textContent   = Math.round(abVol).toLocaleString();
+  document.getElementById('ab_brt').textContent   = ab.brt.toFixed(2);
+  document.getElementById('ab_mach').textContent  = ab.machines;
+  document.getElementById('ab_ind').textContent   = ab.indSAs;
+  document.getElementById('ab_sort').textContent  = `${ab.sortTotal} (${ab.sortPerAisle}+${ab.sortPerAisle})`;
+  document.getElementById('ab_cart').textContent  = ab.cartRunners;
+  document.getElementById('ab_fixed').textContent = ab.fixed;
+  document.getElementById('ab_total').textContent = abFullBuf;
+  document.getElementById('ab_footer_sub').textContent =
+    `Ind ${ab.indSAs} + Sort ${ab.sortTotal} + Pick ${totalPickAB} + Fixed ${ab.fixed}`;
+
+  // ── PICKER CARDS ──
+  const hasPickers = onw3PickVol > 0 || sdaPickVol > 0;
+  document.getElementById('pickerSection').style.display = hasPickers ? 'grid' : 'none';
+  if (hasPickers) {
+    const uph = 'N/A';
+    document.getElementById('pk_onw3_vol').textContent   = onw3PickVol.toLocaleString();
+    document.getElementById('pk_onw3_uph').textContent   = '1 per 2,500 pkgs';
+    document.getElementById('pk_onw3_bb').textContent    = onw3PickBB;
+    document.getElementById('pk_onw3_ab').textContent    = onw3PickAB;
+    document.getElementById('pk_onw3_total').textContent = Math.max(onw3PickBB, onw3PickAB);
+    document.getElementById('pk_sda_vol').textContent    = sdaPickVol.toLocaleString();
+    document.getElementById('pk_sda_uph').textContent    = `6 aisles · 2h · 50 pkg/hr/person`;
+    document.getElementById('pk_sda_bb').textContent     = sdaPickBB + ' (additional HC)';
+    document.getElementById('pk_sda_ab').textContent     = sdaPickAB + ' (additional HC)';
+    document.getElementById('pk_sda_total').textContent  = sdaPickersTotal;
+  }
+
+  // ── AVAILABILITY ──
+  document.getElementById('av_planned').textContent = plannedHC || '—';
+  document.getElementById('av_buffer').textContent  = `-${absenceRate}%`;
+  document.getElementById('av_avail').textContent   = available;
+  document.getElementById('av_needed').textContent  = maxNeeded;
+
+  const deltaEl    = document.getElementById('av_delta');
+  const deltaSubEl = document.getElementById('av_delta_sub');
+  deltaEl.textContent    = plannedHC ? (delta >= 0 ? `+${delta}` : delta) : '—';
+  deltaEl.className      = 'av-num ' + (plannedHC ? (delta >= 0 ? 'ok' : 'bad') : 'neutral');
+  deltaSubEl.textContent = plannedHC ? (delta >= 0 ? 'sufficient' : 'SHORTAGE') : 'no plan entered';
+
+  // VET / VTO action
+  const actionEl    = document.getElementById('av_action');
+  const actionSubEl = document.getElementById('av_action_sub');
+  if (!plannedHC) {
+    actionEl.textContent = '—';
+    actionEl.style.color = 'var(--muted)';
+    actionSubEl.textContent = '—';
+  } else if (delta < 0) {
+    actionEl.textContent = `VET ${Math.abs(delta)}`;
+    actionEl.style.color = 'var(--red)';
+    actionSubEl.textContent = `need ${Math.abs(delta)} more people`;
+  } else if (delta > 0) {
+    actionEl.textContent = `VTO ${delta}`;
+    actionEl.style.color = 'var(--green)';
+    actionSubEl.textContent = `can release ${delta} people`;
+  } else {
+    actionEl.textContent = 'Balanced';
+    actionEl.style.color = 'var(--cyan)';
+    actionSubEl.textContent = 'no action needed';
+  }
+
+  document.getElementById('results').classList.remove('hidden');
+
+  // ── METHODOLOGY PANEL ──
+  document.getElementById('m_shiftStart').textContent  = shiftStart;
+  document.getElementById('m_break').textContent       = `${breakStart} – ${breakEnd}`;
+  document.getElementById('m_inductEnd').textContent   = inductEnd;
+  document.getElementById('m_bb_brt').textContent      = bb.brt.toFixed(2) + ' h';
+  document.getElementById('m_ab_brt').textContent      = ab.brt.toFixed(2) + ' h';
+  document.getElementById('m_ov').textContent          = oversizePct + '%';
+  document.getElementById('m_vol').textContent         = (totalVol + onw3PickVol + sdaPickVol).toLocaleString();
+  document.getElementById('m_bb_vol').textContent      = Math.round(bbVol).toLocaleString();
+  document.getElementById('m_ab_vol').textContent      = Math.round(abVol).toLocaleString();
+  const ovF = oversizePct/100;
+  document.getElementById('m_pph').textContent         = Math.round(bb.effectivePPH) + ' p/hr' + (PPH !== 350 ? ' (CSV weighted)' : '');
+  document.getElementById('m_induct_rate').textContent = Math.round(INDUCT_RATE * (1-ovF + ovF/1.5)) + ' p/hr';
+  document.getElementById('m_sda_pick').textContent    = sdaPickersTotal + ' (add. HC)';
+  document.getElementById('m_buffer').textContent      = `-${absenceRate}%`;
+  document.getElementById('m_bb_hc').textContent       = bbFullBuf;
+  document.getElementById('m_mco_hc').textContent      = `+${mcoHC}`;
+  document.getElementById('m_max_hc').textContent      = maxNeeded;
+  document.getElementById('m_avail_hc').textContent    = available;
+}
+
+// Allow Enter key to trigger calc
+document.addEventListener('keydown', e => { if(e.key==='Enter') calculate(); });
+</script>
+</body>
+</html>
